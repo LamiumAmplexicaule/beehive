@@ -67,6 +67,15 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                         }
                     };
                     let mut file_list: Vec<FileInfo> = Vec::new();
+                    let parent = path.parent().unwrap();
+                    if parent.exists() {
+                        let parent_metadata = parent.metadata().unwrap();
+                        file_list.push(FileInfo {
+                            name: "..".to_string(),
+                            is_file: false,
+                            last_modification: DateTime::from(parent_metadata.modified().unwrap()),
+                        });
+                    }
                     for entry in paths {
                         let entry = entry.unwrap();
                         let metadata = entry.metadata().unwrap();
