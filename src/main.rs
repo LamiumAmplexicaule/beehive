@@ -5,9 +5,11 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 use axum::{Router, Server};
 use axum::body::{Body, BoxBody, boxed};
+use axum::extract::{ContentLengthLimit, Multipart};
 use axum::http::{Request, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
+use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
 use tower::ServiceExt;
@@ -43,6 +45,7 @@ async fn main() {
 
     let app: _ = Router::new()
         .route("/favicon.ico", get(favicon))
+        .route("/upload", post(upload))
         .fallback(get(handle))
         .layer(TraceLayer::new_for_http());
 
@@ -51,6 +54,40 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+async fn upload(
+    ContentLengthLimit(mut multipart): ContentLengthLimit<
+        Multipart,
+        {
+            1024 * 1024 * 1024 /* 1Gb */
+        },
+    >,
+) -> Result<impl IntoResponse, StatusCode> {
+    let mut files: Vec<(String, Bytes)> = Vec::new();
+    let mut path: String = "".to_string();
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let name = field.name().unwrap().to_string();
+
+        if name.eq("path") {
+            path = field.text().await.unwrap();
+            continue;
+        }
+
+        let file_name = field.file_name().unwrap().to_string();
+        let data = field.bytes().await.unwrap();
+        files.push((file_name, data));
+    }
+
+    for (file_name, data) in files {
+        let filepath = ".".to_string() + &path;
+        let filepath = Path::new(&filepath);
+        let filepath = filepath.join(Path::new(&file_name));
+        tokio::fs::write(filepath, data).await.map_err(|e| {
+            eprint!("Error writing file: {}", e);
+        }).unwrap();
+    }
+    Ok(StatusCode::CREATED)
 }
 
 async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {

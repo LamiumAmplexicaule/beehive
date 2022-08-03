@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 askama = "0.11"
-axum = "0.5"
+axum = { version = "0.5", features = ["multipart"] }
 base64 = "0.13"
+bytes = "1.2.1"
 clap = { version = "3.2.15", features = ["derive"] }
 chrono = "0.4"
 tokio = { version = "1", features = ["full"] }
