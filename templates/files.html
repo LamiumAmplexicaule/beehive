@@ -43,7 +43,25 @@
             </tbody>
         </table>
     </div>
+    <form class="input-group" id="form">
+        <input type="file" class="form-control" name="file" multiple>
+        <input type="submit" class="btn btn-outline-secondary">
+    </form>
 </div>
+<script>
+    let form = document.getElementById("form");
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        let formData = new FormData(form);
+        formData.append('path', location.pathname);
+        await fetch('/upload', {
+            method: 'POST',
+            body: formData,
+        });
+        form.reset();
+        location.reload();
+    };
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
         crossorigin="anonymous"></script>
