@@ -25,20 +25,20 @@
             </thead>
             <tbody>
             {%- for file in files %}
-            <tr>
-                <td>
-                    {%- if file.is_file %}
-                    <i class="bi bi-file-earmark"></i>
-                    {%- else %}
-                    <i class="bi bi-folder2"></i>
-                    {%- endif %}
-                </td>
-                <th scope="row">
-                    <a href="{{ file.name }}">{{ file.name }}</th>
-                <td>
-                    {{ file.last_modification.format("%Y-%m-%d %H:%M:%S").to_string() }}
-                </td>
-            </tr>
+                <tr>
+                    <td>
+                        {%- if file.is_file %}
+                        <i class="bi bi-file-earmark"></i>
+                        {%- else %}
+                        <i class="bi bi-folder2"></i>
+                        {%- endif %}
+                    </td>
+                    <th scope="row">
+                        <a href="{{ file.name }}">{{ file.name }}</th>
+                    <td>
+                        {{ file.last_modification.format("%Y-%m-%d %H:%M:%S").to_string() }}
+                    </td>
+                </tr>
             {%- endfor -%}
             </tbody>
         </table>
