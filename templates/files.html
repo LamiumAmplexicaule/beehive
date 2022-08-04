@@ -61,6 +61,34 @@
         form.reset();
         location.reload();
     };
+    let dropzone = document.documentElement;
+    let input = form.querySelector('input');
+    dropzone.addEventListener('dragover', async (e) => {
+        e.preventDefault()
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault(); // Prevent default behavior (Prevent file from being opened)
+        let eventDataTransfer = e.dataTransfer;
+        let dataTransfer = new DataTransfer();
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files.item(i);
+            dataTransfer.items.add(file);
+        }
+        if (eventDataTransfer.items) {
+            for (let i = 0; i < eventDataTransfer.items.length; i++) {
+                if (eventDataTransfer.items[i].kind === 'file') {
+                    const file = eventDataTransfer.items[i].getAsFile();
+                    dataTransfer.items.add(file);
+                }
+            }
+        } else {
+            for (let i = 0; i < eventDataTransfer.files.length; i++) {
+                const file = eventDataTransfer.files.item(i);
+                dataTransfer.items.add(file);
+            }
+        }
+        input.files = dataTransfer.files;
+    });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
