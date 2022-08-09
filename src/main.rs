@@ -12,6 +12,7 @@ use axum::routing::{get, post};
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
+use humansize::{file_size_opts, FileSize};
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -112,6 +113,7 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                             name: "..".to_string(),
                             is_file: false,
                             last_modification: DateTime::from(parent_metadata.modified().unwrap()),
+                            file_size: 0.file_size(file_size_opts::DECIMAL).unwrap()
                         });
                     }
                     for entry in paths {
@@ -121,6 +123,7 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                             name: entry.file_name().into_string().unwrap(),
                             is_file: metadata.file_type().is_file(),
                             last_modification: DateTime::from(metadata.modified().unwrap()),
+                            file_size: metadata.len().file_size(file_size_opts::DECIMAL).unwrap()
                         });
                     }
                     Ok(FileListTemplate { files: file_list }.into_response())
@@ -139,6 +142,7 @@ struct FileInfo {
     name: String,
     is_file: bool,
     last_modification: DateTime<Local>,
+    file_size: String,
 }
 
 impl Display for FileInfo {

@@ -12,6 +12,7 @@ base64 = "0.13"
 bytes = "1.2.1"
 clap = { version = "3.2.15", features = ["derive"] }
 chrono = "0.4"
+humansize = "1.1.1"
 tokio = { version = "1", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.3.0", features = ["fs", "trace"] }
