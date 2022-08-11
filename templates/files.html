@@ -21,6 +21,7 @@
                 <th scope="col"></th>
                 <th scope="col">Name</th>
                 <th scope="col">Last Modification</th>
+                <th scope="col">File Size</th>
             </tr>
             </thead>
             <tbody>
@@ -37,6 +38,13 @@
                         <a href="{{ file.name }}">{{ file.name }}</th>
                     <td>
                         {{ file.last_modification.format("%Y-%m-%d %H:%M:%S").to_string() }}
+                    </td>
+                    <td>
+                        {%- if file.is_file %}
+                        {{ file.file_size }}
+                        {%- else %}
+                        ---
+                        {%- endif %}
                     </td>
                 </tr>
             {%- endfor -%}
