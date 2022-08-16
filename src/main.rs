@@ -113,7 +113,7 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                             name: "..".to_string(),
                             is_file: false,
                             last_modification: DateTime::from(parent_metadata.modified().unwrap()),
-                            file_size: 0.file_size(file_size_opts::DECIMAL).unwrap()
+                            file_size: 0.file_size(file_size_opts::DECIMAL).unwrap(),
                         });
                     }
                     for entry in paths {
@@ -123,7 +123,7 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                             name: entry.file_name().into_string().unwrap(),
                             is_file: metadata.file_type().is_file(),
                             last_modification: DateTime::from(metadata.modified().unwrap()),
-                            file_size: metadata.len().file_size(file_size_opts::DECIMAL).unwrap()
+                            file_size: metadata.len().file_size(file_size_opts::DECIMAL).unwrap(),
                         });
                     }
                     Ok(FileListTemplate { files: file_list }.into_response())
