@@ -1,25 +1,13 @@
-use std::fmt::{Display, Formatter};
-use std::fs;
 use askama::Template;
-use std::fs::read_dir;
-use std::net::{IpAddr, SocketAddr};
-use std::path::Path;
-use std::sync::Arc;
-use axum::{Extension, Router, Server};
-use axum::body::{Body, BoxBody, boxed};
-use axum::extract::{ContentLengthLimit, Multipart};
-use axum::http::{Request, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::{Router, Server, body::{Body, BoxBody, boxed}, extract::{ContentLengthLimit, Multipart}, http::{Request, StatusCode}, response::{Html, IntoResponse, Response}, routing::{get, post}, Extension};
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
 use humansize::{file_size_opts, FileSize};
+use std::{fs::read_dir, fmt::{Display, Formatter}, net::{IpAddr, SocketAddr}, path::Path, sync::Arc, fs};
 use tower::ServiceExt;
-use tower_http::services::ServeDir;
-use tower_http::trace::TraceLayer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tower_http::{services::ServeDir, trace::TraceLayer};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 
 #[derive(Parser, Debug)]
@@ -195,6 +183,7 @@ impl IntoResponse for FileListTemplate {
     }
 }
 
+//noinspection SpellCheckingInspection
 async fn favicon() -> impl IntoResponse {
     let icon = concat!(
     "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAFT2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja",
