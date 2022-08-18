@@ -1,9 +1,11 @@
 use std::fmt::{Display, Formatter};
+use std::fs;
 use askama::Template;
 use std::fs::read_dir;
 use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
-use axum::{Router, Server};
+use std::sync::Arc;
+use axum::{Extension, Router, Server};
 use axum::body::{Body, BoxBody, boxed};
 use axum::extract::{ContentLengthLimit, Multipart};
 use axum::http::{Request, StatusCode};
@@ -29,12 +31,22 @@ struct Args {
     /// Port number
     #[clap(long, default_value = "8000")]
     http_port: u16,
+    /// Root Directory
+    #[clap(long, default_value = ".")]
+    root: String,
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
     let socket_address: SocketAddr = (args.host, args.http_port).into();
+    let root = fs::canonicalize(args.root).unwrap();
+
+    let config = Arc::new(Args {
+        host: args.host,
+        http_port: args.http_port,
+        root: root.to_str().unwrap().to_string(),
+    });
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
@@ -48,8 +60,10 @@ async fn main() {
         .route("/favicon.ico", get(favicon))
         .route("/upload", post(upload))
         .fallback(get(handle))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .layer(Extension(config));
 
+    tracing::debug!("Root directory: {}", root.display());
     tracing::debug!("Listening on {}", socket_address);
     Server::bind(&socket_address)
         .serve(app.into_make_service())
@@ -58,6 +72,7 @@ async fn main() {
 }
 
 async fn upload(
+    Extension(config): Extension<Arc<Args>>,
     ContentLengthLimit(mut multipart): ContentLengthLimit<
         Multipart,
         {
@@ -67,6 +82,7 @@ async fn upload(
 ) -> Result<impl IntoResponse, StatusCode> {
     let mut files: Vec<(String, Bytes)> = Vec::new();
     let mut path: String = "".to_string();
+    let root = config.root.clone();
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
 
@@ -81,7 +97,7 @@ async fn upload(
     }
 
     for (file_name, data) in files {
-        let filepath = ".".to_string() + &path;
+        let filepath = root.clone() + &path;
         let filepath = Path::new(&filepath);
         let filepath = filepath.join(Path::new(&file_name));
         tokio::fs::write(filepath, data).await.map_err(|e| {
@@ -91,13 +107,14 @@ async fn upload(
     Ok(StatusCode::CREATED)
 }
 
-async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
+async fn handle(Extension(config): Extension<Arc<Args>>, request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
     let path = request.uri().path().to_string();
-    return match ServeDir::new(".").oneshot(request).await {
+    let root = config.root.clone();
+    return match ServeDir::new(&root).oneshot(request).await {
         Ok(response) => {
             match response.status() {
                 StatusCode::NOT_FOUND => {
-                    let path = ".".to_string() + path.as_str();
+                    let path = root.clone() + path.as_str();
                     let path = Path::new(&path);
                     let paths = match read_dir(path) {
                         Ok(v) => v,
@@ -107,7 +124,7 @@ async fn handle(request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode
                     };
                     let mut file_list: Vec<FileInfo> = Vec::new();
                     let parent = path.parent().unwrap();
-                    if parent.exists() {
+                    if !path.eq(Path::new(&root)) && parent.exists() {
                         let parent_metadata = parent.metadata().unwrap();
                         file_list.push(FileInfo {
                             name: "..".to_string(),
