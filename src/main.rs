@@ -4,7 +4,7 @@ use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
 use humansize::{file_size_opts, FileSize};
-use std::{fs::read_dir, fmt::{Display, Formatter}, net::{IpAddr, SocketAddr}, path::Path, sync::Arc, fs};
+use std::{fs::read_dir, fmt::{Display, Formatter}, net::{IpAddr, SocketAddr}, path::Path, sync::Arc};
 use tower::ServiceExt;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -28,7 +28,7 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     let socket_address: SocketAddr = (args.host, args.http_port).into();
-    let root = fs::canonicalize(args.root).unwrap();
+    let root = dunce::canonicalize(args.root).unwrap();
 
     let config = Arc::new(Args {
         host: args.host,
