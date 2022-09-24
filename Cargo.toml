@@ -13,7 +13,7 @@ bytes = "1.2.1"
 clap = { version = "3.2.15", features = ["derive"] }
 chrono = "0.4"
 dunce = "1.0.2"
-humansize = "1.1.1"
+humansize = "2.0.0"
 tokio = { version = "1", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.3.0", features = ["fs", "trace"] }
