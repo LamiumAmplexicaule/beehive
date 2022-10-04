@@ -10,7 +10,7 @@ askama = "0.11"
 axum = { version = "0.5", features = ["multipart"] }
 base64 = "0.13"
 bytes = "1.2.1"
-clap = { version = "3.2.15", features = ["derive"] }
+clap = { version = "4.0.8", features = ["derive"] }
 chrono = "0.4"
 dunce = "1.0.2"
 humansize = "2.0.0"
