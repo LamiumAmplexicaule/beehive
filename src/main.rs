@@ -3,7 +3,7 @@ use axum::{Router, Server, body::{Body, BoxBody, boxed}, extract::{ContentLength
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
-use humansize::{file_size_opts, FileSize};
+use humansize::{format_size, DECIMAL};
 use std::{fs::read_dir, fmt::{Display, Formatter}, net::{IpAddr, SocketAddr}, path::Path, sync::Arc};
 use tower::ServiceExt;
 use tower_http::{services::ServeDir, trace::TraceLayer};
@@ -118,7 +118,7 @@ async fn handle(Extension(config): Extension<Arc<Args>>, request: Request<Body>)
                             name: "..".to_string(),
                             is_file: false,
                             last_modification: DateTime::from(parent_metadata.modified().unwrap()),
-                            file_size: 0.file_size(file_size_opts::DECIMAL).unwrap(),
+                            file_size: format_size(0u32, DECIMAL),
                         });
                     }
                     for entry in paths {
@@ -128,7 +128,7 @@ async fn handle(Extension(config): Extension<Arc<Args>>, request: Request<Body>)
                             name: entry.file_name().into_string().unwrap(),
                             is_file: metadata.file_type().is_file(),
                             last_modification: DateTime::from(metadata.modified().unwrap()),
-                            file_size: metadata.len().file_size(file_size_opts::DECIMAL).unwrap(),
+                            file_size: format_size(metadata.len(), DECIMAL),
                         });
                     }
                     Ok(FileListTemplate { files: file_list }.into_response())
