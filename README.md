@@ -1,5 +1,7 @@
 # beehive
 
+[![dependency status](https://deps.rs/repo/github/LamiumAmplexicaule/beehive/status.svg)](https://deps.rs/repo/github/LamiumAmplexicaule/beehive)
+
 ## Reference
 https://github.com/tokio-rs/axum/blob/main/examples
 
