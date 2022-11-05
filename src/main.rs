@@ -10,17 +10,17 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
 struct Args {
     /// Listen address
-    #[clap(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = "127.0.0.1")]
     host: IpAddr,
     /// Port number
-    #[clap(long, default_value = "8000")]
+    #[arg(long, default_value = "8000")]
     http_port: u16,
     /// Root Directory
-    #[clap(long, default_value = ".")]
+    #[arg(long, default_value = ".")]
     root: String,
 }
 
