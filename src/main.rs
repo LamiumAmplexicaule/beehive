@@ -1,14 +1,14 @@
+use std::{fmt::{Display, Formatter}, fs::read_dir, net::{IpAddr, SocketAddr}, path::Path, sync::Arc};
+
 use askama::Template;
-use axum::{Router, Server, body::{Body, BoxBody, boxed}, extract::{ContentLengthLimit, Multipart}, http::{Request, StatusCode}, response::{Html, IntoResponse, Response}, routing::{get, post}, Extension};
+use axum::{body::{Body, BoxBody, boxed}, extract::{DefaultBodyLimit, Multipart, State}, http::{Request, StatusCode}, response::{Html, IntoResponse, Response}, Router, routing::{get, post}, Server};
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
-use humansize::{format_size, DECIMAL};
-use std::{fs::read_dir, fmt::{Display, Formatter}, net::{IpAddr, SocketAddr}, path::Path, sync::Arc};
+use humansize::{DECIMAL, format_size};
 use tower::ServiceExt;
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -47,9 +47,11 @@ async fn main() {
     let app: _ = Router::new()
         .route("/favicon.ico", get(favicon))
         .route("/upload", post(upload))
-        .fallback(get(handle))
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(1024 * 1024 * 1024)) /* 1Gb */
         .layer(TraceLayer::new_for_http())
-        .layer(Extension(config));
+        .fallback(handler)
+        .with_state(config);
 
     tracing::debug!("Root directory: {}", root.display());
     tracing::debug!("Listening on {}", socket_address);
@@ -60,13 +62,8 @@ async fn main() {
 }
 
 async fn upload(
-    Extension(config): Extension<Arc<Args>>,
-    ContentLengthLimit(mut multipart): ContentLengthLimit<
-        Multipart,
-        {
-            1024 * 1024 * 1024 /* 1Gb */
-        },
-    >,
+    State(config): State<Arc<Args>>,
+    mut multipart: Multipart,
 ) -> Result<impl IntoResponse, StatusCode> {
     let mut files: Vec<(String, Bytes)> = Vec::new();
     let mut path: String = "".to_string();
@@ -95,7 +92,7 @@ async fn upload(
     Ok(StatusCode::CREATED)
 }
 
-async fn handle(Extension(config): Extension<Arc<Args>>, request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
+async fn handler(State(config): State<Arc<Args>>, request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
     let path = request.uri().path().to_string();
     let root = config.root.clone();
     return match ServeDir::new(&root).oneshot(request).await {
