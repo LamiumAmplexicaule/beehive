@@ -2,6 +2,7 @@ use std::{fmt::{Display, Formatter}, fs::read_dir, net::{IpAddr, SocketAddr}, pa
 
 use askama::Template;
 use axum::{body::{Body, BoxBody, boxed}, extract::{DefaultBodyLimit, Multipart, State}, http::{Request, StatusCode}, response::{Html, IntoResponse, Response}, Router, routing::{get, post}, Server};
+use base64::{Engine as _, engine::general_purpose};
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
@@ -237,6 +238,6 @@ async fn favicon() -> impl IntoResponse {
         axum::response::AppendHeaders([
             (axum::http::header::CONTENT_TYPE, "image/vnd.microsoft.icon"),
         ]),
-        base64::decode(icon).unwrap(),
+        general_purpose::STANDARD.decode(icon).unwrap(),
     )
 }
