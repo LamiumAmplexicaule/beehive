@@ -7,6 +7,7 @@ use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
 use humansize::{DECIMAL, format_size};
+use percent_encoding::percent_decode;
 use tower::ServiceExt;
 use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -94,7 +95,7 @@ async fn upload(
 }
 
 async fn handler(State(config): State<Arc<Args>>, request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
-    let path = request.uri().path().to_string();
+    let path = percent_decode(request.uri().path().as_bytes()).decode_utf8().unwrap().to_string();
     let root = config.root.clone();
     return match ServeDir::new(&root).oneshot(request).await {
         Ok(response) => {
