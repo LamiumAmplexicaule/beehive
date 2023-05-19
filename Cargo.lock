@@ -189,6 +189,7 @@ dependencies = [
  "clap",
  "dunce",
  "humansize",
+ "percent-encoding",
  "tokio",
  "tower",
  "tower-http",
