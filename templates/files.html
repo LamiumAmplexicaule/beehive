@@ -61,7 +61,7 @@
     form.onsubmit = async (e) => {
         e.preventDefault();
         let formData = new FormData(form);
-        formData.append('path', location.pathname);
+        formData.append('__path__', location.pathname);
         await fetch('/upload', {
             method: 'POST',
             body: formData,
@@ -83,17 +83,16 @@
             dataTransfer.items.add(file);
         }
         if (eventDataTransfer.items) {
-            for (let i = 0; i < eventDataTransfer.items.length; i++) {
-                if (eventDataTransfer.items[i].kind === 'file') {
-                    const file = eventDataTransfer.items[i].getAsFile();
-                    dataTransfer.items.add(file);
+            [...eventDataTransfer.items].forEach((item) => {
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    dataTransfer.items.add(file)
                 }
-            }
+            });
         } else {
-            for (let i = 0; i < eventDataTransfer.files.length; i++) {
-                const file = eventDataTransfer.files.item(i);
-                dataTransfer.items.add(file);
-            }
+            [...eventDataTransfer.files].forEach((file) => {
+                dataTransfer.items.add(file)
+            });
         }
         input.files = dataTransfer.files;
     });

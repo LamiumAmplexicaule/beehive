@@ -73,14 +73,16 @@ async fn upload(
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
 
-        if name.eq("path") {
+        if name.eq("__path__") {
             path = field.text().await.unwrap();
             continue;
         }
 
         let file_name = field.file_name().unwrap().to_string();
-        let data = field.bytes().await.unwrap();
-        files.push((file_name, data));
+        if file_name.len() > 0 {
+            let data = field.bytes().await.unwrap();
+            files.push((file_name, data));
+        }
     }
 
     for (file_name, data) in files {
