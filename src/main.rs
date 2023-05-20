@@ -1,12 +1,25 @@
-use std::{fmt::{Display, Formatter}, fs::read_dir, net::{IpAddr, SocketAddr}, path::Path, sync::Arc};
+use std::{
+    fmt::{Display, Formatter},
+    fs::read_dir,
+    net::{IpAddr, SocketAddr},
+    path::Path,
+    sync::Arc,
+};
 
 use askama::Template;
-use axum::{body::{Body, BoxBody, boxed}, extract::{DefaultBodyLimit, Multipart, State}, http::{Request, StatusCode}, response::{Html, IntoResponse, Response}, Router, routing::{get, post}, Server};
-use base64::{Engine as _, engine::general_purpose};
+use axum::{
+    body::{boxed, Body, BoxBody},
+    extract::{DefaultBodyLimit, Multipart, State},
+    http::{Request, StatusCode},
+    response::{Html, IntoResponse, Response},
+    routing::{get, post},
+    Router, Server,
+};
+use base64::{engine::general_purpose, Engine as _};
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use clap::Parser;
-use humansize::{DECIMAL, format_size};
+use humansize::{format_size, DECIMAL};
 use percent_encoding::percent_decode;
 use tower::ServiceExt;
 use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir, trace::TraceLayer};
@@ -20,7 +33,7 @@ struct Args {
     host: IpAddr,
     /// Port number
     #[arg(long, default_value = "8000")]
-    http_port: u16,
+    port: u16,
     /// Root Directory
     #[arg(long, default_value = ".")]
     root: String,
@@ -29,19 +42,18 @@ struct Args {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let socket_address: SocketAddr = (args.host, args.http_port).into();
+    let socket_address: SocketAddr = (args.host, args.port).into();
     let root = dunce::canonicalize(args.root).unwrap();
 
     let config = Arc::new(Args {
         host: args.host,
-        http_port: args.http_port,
+        port: args.port,
         root: root.to_str().unwrap().to_string(),
     });
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
-            std::env::var("RUST_LOG")
-                .unwrap_or_else(|_| "beehive=debug,tower_http=debug".into()),
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "beehive=debug,tower_http=debug".into()),
         ))
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -56,7 +68,7 @@ async fn main() {
         .with_state(config);
 
     tracing::debug!("Root directory: {}", root.display());
-    tracing::debug!("Listening on {}", socket_address);
+    tracing::debug!("Listening on http://{}", socket_address);
     Server::bind(&socket_address)
         .serve(app.into_make_service())
         .await
@@ -79,7 +91,7 @@ async fn upload(
         }
 
         let file_name = field.file_name().unwrap().to_string();
-        if file_name.len() > 0 {
+        if !file_name.is_empty() {
             let data = field.bytes().await.unwrap();
             files.push((file_name, data));
         }
@@ -89,54 +101,64 @@ async fn upload(
         let filepath = root.clone() + &path;
         let filepath = Path::new(&filepath);
         let filepath = filepath.join(Path::new(&file_name));
-        tokio::fs::write(filepath, data).await.map_err(|e| {
-            eprint!("Error writing file: {}", e);
-        }).unwrap();
+        tokio::fs::write(filepath, data)
+            .await
+            .map_err(|e| {
+                eprint!("Error writing file: {}", e);
+            })
+            .unwrap();
     }
     Ok(StatusCode::CREATED)
 }
 
-async fn handler(State(config): State<Arc<Args>>, request: Request<Body>) -> Result<Response<BoxBody>, (StatusCode, String)> {
-    let path = percent_decode(request.uri().path().as_bytes()).decode_utf8().unwrap().to_string();
+async fn handler(
+    State(config): State<Arc<Args>>,
+    request: Request<Body>,
+) -> Result<Response<BoxBody>, (StatusCode, String)> {
+    let path = percent_decode(request.uri().path().as_bytes())
+        .decode_utf8()
+        .unwrap()
+        .to_string();
     let root = config.root.clone();
     return match ServeDir::new(&root).oneshot(request).await {
-        Ok(response) => {
-            match response.status() {
-                StatusCode::NOT_FOUND => {
-                    let path = root.clone() + path.as_str();
-                    let path = Path::new(&path);
-                    let paths = match read_dir(path) {
-                        Ok(v) => v,
-                        Err(error) => {
-                            return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid path, Error: {}", error)));
-                        }
-                    };
-                    let mut file_list: Vec<FileInfo> = Vec::new();
-                    let parent = path.parent().unwrap();
-                    if !path.eq(Path::new(&root)) && parent.exists() {
-                        let parent_metadata = parent.metadata().unwrap();
-                        file_list.push(FileInfo {
-                            name: "..".to_string(),
-                            is_file: false,
-                            last_modification: DateTime::from(parent_metadata.modified().unwrap()),
-                            file_size: format_size(0u32, DECIMAL),
-                        });
+        Ok(response) => match response.status() {
+            StatusCode::NOT_FOUND => {
+                let path = root.clone() + path.as_str();
+                let path = Path::new(&path);
+                let paths = match read_dir(path) {
+                    Ok(v) => v,
+                    Err(error) => {
+                        return Err((
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Invalid path, Error: {}", error),
+                        ));
                     }
-                    for entry in paths {
-                        let entry = entry.unwrap();
-                        let metadata = entry.metadata().unwrap();
-                        file_list.push(FileInfo {
-                            name: entry.file_name().into_string().unwrap(),
-                            is_file: metadata.file_type().is_file(),
-                            last_modification: DateTime::from(metadata.modified().unwrap()),
-                            file_size: format_size(metadata.len(), DECIMAL),
-                        });
-                    }
-                    Ok(FileListTemplate { files: file_list }.into_response())
+                };
+                let mut file_list: Vec<FileInfo> = Vec::new();
+                let parent = path.parent().unwrap();
+                if !path.eq(Path::new(&root)) && parent.exists() {
+                    let parent_metadata = parent.metadata().unwrap();
+                    file_list.push(FileInfo {
+                        name: "..".to_string(),
+                        is_file: false,
+                        last_modification: DateTime::from(parent_metadata.modified().unwrap()),
+                        file_size: format_size(0u32, DECIMAL),
+                    });
                 }
-                _ => Ok(response.map(boxed))
+                for entry in paths {
+                    let entry = entry.unwrap();
+                    let metadata = entry.metadata().unwrap();
+                    file_list.push(FileInfo {
+                        name: entry.file_name().into_string().unwrap(),
+                        is_file: metadata.file_type().is_file(),
+                        last_modification: DateTime::from(metadata.modified().unwrap()),
+                        file_size: format_size(metadata.len(), DECIMAL),
+                    });
+                }
+                Ok(FileListTemplate { files: file_list }.into_response())
             }
-        }
+            _ => Ok(response.map(boxed)),
+        },
         Err(err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Something went wrong: {}", err),
@@ -176,10 +198,11 @@ impl IntoResponse for FileListTemplate {
     fn into_response(self) -> Response<BoxBody> {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR,
-                 format!("Failed to render template. Error: {}", error)).into_response()
-            }
+            Err(error) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to render template. Error: {}", error),
+            )
+                .into_response(),
         }
     }
 }
@@ -238,9 +261,10 @@ async fn favicon() -> impl IntoResponse {
     "AAAASUVORK5CYII=",
     );
     (
-        axum::response::AppendHeaders([
-            (axum::http::header::CONTENT_TYPE, "image/vnd.microsoft.icon"),
-        ]),
+        axum::response::AppendHeaders([(
+            axum::http::header::CONTENT_TYPE,
+            "image/vnd.microsoft.icon",
+        )]),
         general_purpose::STANDARD.decode(icon).unwrap(),
     )
 }
