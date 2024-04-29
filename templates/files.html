@@ -26,28 +26,28 @@
             </thead>
             <tbody>
             {%- for file in files %}
-                <tr>
-                    <td>
-                        {%- if file.is_file %}
-                        <i class="bi bi-file-earmark"></i>
-                        {%- else %}
-                        <i class="bi bi-folder2"></i>
-                        {%- endif %}
-                    </td>
-                    <td>
-                        <a href="{{ file.name }}">{{ file.name }}
-                    </td>
-                    <td>
-                        {{ file.last_modification.format("%Y-%m-%d %H:%M:%S").to_string() }}
-                    </td>
-                    <td>
-                        {%- if file.is_file %}
-                        {{ file.file_size }}
-                        {%- else %}
-                        ---
-                        {%- endif %}
-                    </td>
-                </tr>
+            <tr>
+                <td>
+                    {%- if file.is_file %}
+                    <i class="bi bi-file-earmark"></i>
+                    {%- else %}
+                    <i class="bi bi-folder2"></i>
+                    {%- endif %}
+                </td>
+                <td>
+                    <a href="{{ file.name }}">{{ file.name }}</a>
+                </td>
+                <td>
+                    {{ file.last_modification.format("%Y-%m-%d %H:%M:%S").to_string() }}
+                </td>
+                <td>
+                    {%- if file.is_file %}
+                    {{ file.file_size }}
+                    {%- else %}
+                    ---
+                    {%- endif %}
+                </td>
+            </tr>
             {%- endfor -%}
             </tbody>
         </table>
