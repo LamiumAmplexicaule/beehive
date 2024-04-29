@@ -8,12 +8,12 @@ use std::{
 
 use askama::Template;
 use axum::{
-    body::{boxed, Body, BoxBody},
+    body::Body,
     extract::{DefaultBodyLimit, Multipart, State},
     http::{Request, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Router, Server,
+    Router,
 };
 use base64::{engine::general_purpose, Engine as _};
 use bytes::Bytes;
@@ -58,7 +58,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let app: _ = Router::new()
+    let app = Router::new()
         .route("/favicon.ico", get(favicon))
         .route("/upload", post(upload))
         .layer(DefaultBodyLimit::disable())
@@ -69,10 +69,10 @@ async fn main() {
 
     tracing::debug!("Root directory: {}", root.display());
     tracing::debug!("Listening on http://{}", socket_address);
-    Server::bind(&socket_address)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(&socket_address)
         .await
         .unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn upload(
@@ -114,7 +114,7 @@ async fn upload(
 async fn handler(
     State(config): State<Arc<Args>>,
     request: Request<Body>,
-) -> Result<Response<BoxBody>, (StatusCode, String)> {
+) -> Result<Response<Body>, (StatusCode, String)> {
     let path = percent_decode(request.uri().path().as_bytes())
         .decode_utf8()
         .unwrap()
@@ -157,7 +157,7 @@ async fn handler(
                 }
                 Ok(FileListTemplate { files: file_list }.into_response())
             }
-            _ => Ok(response.map(boxed)),
+            _ => Ok(response.map(Body::new)),
         },
         Err(err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -195,7 +195,7 @@ impl IntoIterator for FileListTemplate {
 }
 
 impl IntoResponse for FileListTemplate {
-    fn into_response(self) -> Response<BoxBody> {
+    fn into_response(self) -> Response<Body> {
         match self.render() {
             Ok(html) => Html(html).into_response(),
             Err(error) => (
